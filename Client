@@ -1,0 +1,68 @@
+using Ch02_Main;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DummyClient
+{
+    class Ch09_GameSession : Ch09_Session // 컨텐츠단
+    {
+        public override void OnConnected(EndPoint endPoint)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                byte[] sendBuffer = Encoding.UTF8.GetBytes($"Client Connecting {i} ");
+                Send(sendBuffer);
+            }
+        }
+
+        public override void OnDisconnected(EndPoint endPoint)
+        {
+            Console.WriteLine($"OnDisconnected: {endPoint}");
+        }
+
+        public override void OnRecv(ArraySegment<byte> buffer)
+        {
+            string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+            Console.WriteLine($"[From Server] {recvData}");
+        }
+
+        public override void OnSend(int numOfBytes)
+        {
+            Console.WriteLine($"TransferedBytes: {numOfBytes}");
+        }
+    }
+
+    internal class Ch04_Clinet
+    {
+        public static void c_Main()
+        {
+            string host = Dns.GetHostName();
+            IPHostEntry ipHost = Dns.GetHostEntry(host);
+            IPAddress ipAddr = ipHost.AddressList[0];
+            IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
+
+            Ch10_Connector connector = new Ch10_Connector();
+
+            connector.Connect(endPoint, () => { return new Ch09_GameSession(); });
+
+            while (true)
+            {
+                try
+                {
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+
+                Thread.Sleep(1000);
+            }
+        }
+    }
+}
