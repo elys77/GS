@@ -1,0 +1,65 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Ch02_Main
+{
+    public class Ch10_Connector
+    {
+        // Socket _socket; // 이렇게 하지 않는 이유: Connect를 하나만 할 수 있지만, 여러 명을 받을 수 있어야함으로 멤버 변수로 사용 X
+
+        Func<Ch09_Session> _sessionFactory;
+
+        public void Connect(IPEndPoint endPoint, Func<Ch09_Session> sessionFactory)
+        {
+            Socket socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+            _sessionFactory = sessionFactory;
+
+            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            args.Completed += new EventHandler<SocketAsyncEventArgs>(OnConnectedCompleted);
+            args.RemoteEndPoint = endPoint;
+            args.UserToken = socket;
+
+            RegisterConnect(args);
+        }
+
+        void RegisterConnect(SocketAsyncEventArgs args)
+        {
+            Socket socket = args.UserToken as Socket;
+            if (socket == null)
+                return;
+
+            bool pending = socket.ConnectAsync(args);
+            if (pending == false)
+                OnConnectedCompleted(null, args);
+
+        }
+
+        void OnConnectedCompleted(object sender, SocketAsyncEventArgs args)
+        {
+            if (args.SocketError == SocketError.Success)
+            {
+                Ch09_Session session = _sessionFactory.Invoke();
+                session.Start(args.ConnectSocket);
+                session.OnConnected(args.RemoteEndPoint);
+            }
+            else
+            {
+                Console.WriteLine($"OnConnectCompleted Fail: {args.SocketError}");
+            }
+        }
+    }
+}
+
+// socket.Connect()도 블록킹 함수
+// Listener의 반대 개념
+
+// 서버와 서버를 연결하는 경우도 있음
+
+
+// - 일단 RemoteEndPoint를 알아봐야겠다
