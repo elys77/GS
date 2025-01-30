@@ -1,0 +1,65 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
+using Ch02_Main;
+
+namespace ServerR
+{
+    class Ch09_GameSession : Ch09_Session // 컨텐츠단
+    {
+        public override void OnConnected(EndPoint endPoint)
+        {
+            Console.WriteLine($"OnConnected: {endPoint}");
+
+            byte[] sendBuffer = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
+            Send(sendBuffer);
+            Thread.Sleep(1000);
+            Disconnect();
+        }
+
+        public override void OnDisconnected(EndPoint endPoint)
+        {
+            Console.WriteLine($"OnDisconnected: {endPoint}");
+        }
+
+        public override void OnRecv(ArraySegment<byte> buffer)
+        {
+            string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+            Console.WriteLine($"[From Client] {recvData}");
+        }
+
+        public override void OnSend(int numOfBytes)
+        {
+            Console.WriteLine($"TransferedBytes: {numOfBytes}");
+        }
+    }
+
+    internal class Program
+    {
+        static Ch09_Listener _listener = new Ch09_Listener();
+
+        public static void Main()
+        {
+            string host = Dns.GetHostName();
+            IPHostEntry hostEntry = Dns.GetHostEntry(host);
+            IPAddress ipAddr = hostEntry.AddressList[0];
+            IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
+
+            _listener.Init(endPoint, () => { return new Ch09_GameSession(); });
+
+            while (true)
+            {
+                ;
+            }
+        }
+    }
+}
+
+// Serer: 컨텐츠단
+// ServerCore: 엔진단
+
