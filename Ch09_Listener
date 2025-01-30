@@ -1,0 +1,58 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Ch02_Main
+{
+    public class Ch09_Listener
+    {
+        Socket _listenSocket;
+        //Action<Socket> _onAcceptHandler;
+        Func<Ch09_Session> _sessionFactory;
+
+        public void Init(IPEndPoint endPoint, Func<Ch09_Session> sessionFactory)
+        {
+            _listenSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            //_onAcceptHandler += onAcceptHandler;
+            _sessionFactory += sessionFactory;
+
+            _listenSocket.Bind(endPoint);
+            _listenSocket.Listen(10);
+
+            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+            args.Completed += new EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
+            RegisterAccept(args);
+        }
+
+        void RegisterAccept(SocketAsyncEventArgs args)
+        {
+            args.AcceptSocket = null;
+
+            bool pending = _listenSocket.AcceptAsync(args);
+            if (pending == false)
+                OnAcceptCompleted(null, args);
+        }
+
+        void OnAcceptCompleted(object sender, SocketAsyncEventArgs args)
+        {
+            if (args.SocketError == SocketError.Success)
+            {
+                Ch09_Session session = _sessionFactory.Invoke();
+                session.Start(args.AcceptSocket);
+                // 위에서 아래로 넘어가면서 클라가 접속을 끊어버리면 OnConnected의 AcceptSocket에 접속하는 것이 허락되지 않음
+                // -> 에러 발생
+                session.OnConnected(args.AcceptSocket.RemoteEndPoint);
+            }
+            else
+            {
+                Console.WriteLine(args.SocketError.ToString());
+            }
+
+            RegisterAccept(args);
+        }
+    }
+}
